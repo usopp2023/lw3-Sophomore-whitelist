@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { WHITELIST_CONTRACT_ADDRESS, abi } from "../constants";
 
 
-export default function home(){
+export default function Home(){
   //跟踪用户的钱包是否链接
   const [walletConnected, setWalletConnected] = useState(false);
   //跟踪当前地址是否已经加入了白名单
@@ -16,14 +16,14 @@ export default function home(){
   //跟踪白名单地址的数量
   const [numberOfWhitelisted, setNumberOfWhitelisted] = useState(0);
   // 创建对 Web3（用于连接到 Metamask）的引用，只要页面打开它就会一直存在，返回同样的对象
-  const web3modalRef = useRef();
+  const web3ModalRef = useRef();
 
  //返回以太坊 PRC 的 provider 或者 signer, true 为 signer，false 为 provider；
-  const getProviderOrSinger = async (needSigner = false) =>{
+  const getProviderOrSigner = async (needSigner = false) =>{
     //连接现有的元掩码地址
-    const provier = await web3modalRef.current.connect();
+    const provider = await web3ModalRef.current.connect();
     //web3provider 自动检测 连接到现有的 Web3 provider （例如钱包 MetaMask），更换网络的时候，会自动刷新页面
-    const web3Provider = new providers.web3Provider(provider);
+    const web3Provider = new providers.Web3Provider(provider);
 
     const { chainId } = await web3Provider.getNetwork();
 
@@ -33,14 +33,15 @@ export default function home(){
       //new Error 创建新的 Error 对象，并将 error.message 属性设置为提供的文本消息。如传入的对象为 message，调用String（message）生成文本消息。 
       throw new Error("Change network to Goerli");
 
-      //如果需要 signer，则返回 signer，否则，返回 web3Provider
-      if (needSigner) {
-        const signer = web3Provider.getSigner();
-        return signer;
-
-      }
-      return web3Provider;
+    
     }
+    //如果需要 signer，则返回 signer，否则，返回 web3Provider
+    if (needSigner) {
+      const signer = web3Provider.getSigner();
+      return signer;
+
+    }
+    return web3Provider;
   };
 
   //将当前连接地址加入白名单：
@@ -51,7 +52,7 @@ export default function home(){
     try{
 
       //获得一个签名者，因为这是一个 write 交易
-      const signer = await getProviderOrSinger(true);
+      const signer = await getProviderOrSigner(true);
 
       //链接现有的合约，并具有 Owner 写入功能
       const whitelistCotract = new Contract(
@@ -81,29 +82,30 @@ export default function home(){
 
     try {
 
-      const provider = await getProviderOrSinger();
+      const provider = await getProviderOrSigner();
 
-      const whitelistCotract = new Contract(
+      const whitelistContract = new Contract(
         WHITELIST_CONTRACT_ADDRESS,
         abi,
         provider
       );
 
-      const _numberOfWitelisted = await whitelistCotract.numberAddressesWhitelisted();
-      setNumberOfWhitelisted(_numberOfWitelisted);
+      const _numberOfWhitelisted =
+        await whitelistContract.numAddressesWhitelisted();
+      setNumberOfWhitelisted(_numberOfWhitelisted);
 
 
     } catch (err) {
       console.error(err);
     }
   };
-
+  
     // checkIfAddressInWhitelist: 检查地址是否在白名单中
   const checkIfAddressInWhitelist = async () => {
 
     try {
 
-    const signer = await getProviderOrSinger(true);
+    const signer = await getProviderOrSigner(true);
     const whitelistCotract = new Contract(
       WHITELIST_CONTRACT_ADDRESS,
       abi,
@@ -121,13 +123,13 @@ export default function home(){
     } catch(err){
       console.error(err);
     }
-    };
+  };
 
     //connectWallet：连接 MetaMask 钱包
 
   const connectWallet = async () =>{
     try{
-      await getProviderOrSinger();
+      await getProviderOrSigner();
       setWalletConnected(true);
 
       checkIfAddressInWhitelist();
@@ -151,7 +153,7 @@ export default function home(){
         );
       } else if (loading) {
         //如果没有加入白名单，在 loading，就返回一个按钮-显示loading
-        return <button className={style.button}>Loading...</button>;
+        return <button className={styles.button}>Loading...</button>;
       } else{
         // 如果没有加入白名单，也不在 loading，就返回一个按钮（链接到 addAddressToWhitelist 函数）
         return (
@@ -169,10 +171,11 @@ export default function home(){
       );
     }
   };
-
+//响应网站状态的变化
+//当 connect 变化，就调用里面的函数。
   useEffect(() => {
     if (!walletConnected){
-      web3modalRef.current = new Web3Modal({
+      web3ModalRef.current = new Web3Modal({
         network:"goerli",
         providerOptions:{},
         disableInjectedProvider:false,
@@ -183,33 +186,31 @@ export default function home(){
 
   return (
     <div>
-      <head><title>Whitelist Dapp</title>
-      <meta name="description" content="Whitelist-Dapp"/>
-      <link rel="icon" href="/favicon.ico"/>
-      </head>
-    
-    <div className={styles.main}>
-      <div>
-        <h1 className={styles.title}>Welcome to Crypto Devs!</h1>
-        <div className={styles.description}>
-          Its an NFT collection for developers in Crypto.
+      <Head>
+        <title>Whitelist Dapp</title>
+        <meta name="description" content="Whitelist-Dapp" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <div className={styles.main}>
+        <div>
+          <h1 className={styles.title}>Welcome to Crypto Devs!</h1>
+          <div className={styles.description}>
+            Its an NFT collection for developers in Crypto.
+          </div>
+          <div className={styles.description}>
+            {numberOfWhitelisted} have already joined the Whitelist
+          </div>
+          {renderButton()}
         </div>
-        <div className={styles.description}>
-          {numberOfWhitelisted} have already joined the Whitelist
+        <div>
+          <img className={styles.image} src="./crypto-devs.svg" />
         </div>
-        {renderButton()}
-      </div>
-      <div>
-        <img className={styles.image} src="./crypto-devs.svg"/>
       </div>
 
-    </div>
       <footer className={styles.footer}>
-        Made with &#10084;by Crypto Devs
+        Made with &#10084; by Crypto Devs
       </footer>
     </div>
-
   );
-
 
 }
